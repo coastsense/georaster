@@ -63,6 +63,7 @@ that require you to load the whole image into memory.  It will also attempt to a
 
 `right` is how many pixels in from the **right** side of the image to skip over before we start clipping
 
+`probeExternalOverview` default to be false, if set as true, it will probe for external overview .ovr url.
 
 *clipping resolution*
 

@@ -49,6 +49,11 @@ class GeoRaster {
     this._url_is_available = typeof URL !== 'undefined';
     this._options = options;
 
+    // By default, we assume the user wants to use internal overview only.
+    if(this._options.probeExternalOverview === undefined) {
+      this._options.probeExternalOverview = false;
+    }
+
     // check if should convert to buffer
     if (typeof data === 'object' && data.constructor && data.constructor.name === 'Buffer' && Buffer.isBuffer(data) === false) {
       data = new Buffer(data);
@@ -93,20 +98,28 @@ class GeoRaster {
   preinitialize(debug) {
     if (debug) console.log('starting preinitialize');
     if (this._url) {
-      // initialize these outside worker to avoid weird worker error
-      // I don't see how cache option is passed through with fromUrl,
-      // though constantinius says it should work: https://github.com/geotiffjs/geotiff.js/issues/61
-      const ovrURL = this._url + '.ovr';
-      return urlExists(ovrURL).then(ovrExists => {
-        if (debug) console.log('overview exists:', ovrExists);
+      if (debug) console.log('probeExternalOverviewURL?: ', this._options.probeExternalOverview);
+      if(this._options.probeExternalOverview === true) {
+        // initialize these outside worker to avoid weird worker error
+        // I don't see how cache option is passed through with fromUrl,
+        // though constantinius says it should work: https://github.com/geotiffjs/geotiff.js/issues/61
+        const ovrURL = this._url + '.ovr';
+        return urlExists(ovrURL).then(ovrExists => {
+          if (debug) console.log('overview exists:', ovrExists);
+          this._options = Object.assign({}, {cache: true, forceXHR: false}, this._options);
+          if (debug) console.log('options:', this._options);
+          if (ovrExists) {
+            return fromUrls(this._url, [ovrURL], this._options);
+          } else {
+            return fromUrl(this._url, this._options);
+          }
+        });
+      }else{
         this._options = Object.assign({}, {cache: true, forceXHR: false}, this._options);
         if (debug) console.log('options:', this._options);
-        if (ovrExists) {
-          return fromUrls(this._url, [ovrURL], this._options);
-        } else {
-          return fromUrl(this._url, this._options);
-        }
-      });
+        return fromUrl(this._url, this._options);
+      }
+
     } else {
       // no pre-initialization steps required if not using a Cloud Optimized GeoTIFF
       return Promise.resolve();
